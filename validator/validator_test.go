@@ -421,3 +421,223 @@ struct TreeNode {
 		t.Errorf("Self-references should be allowed, but got errors: %s", result.String())
 	}
 }
+
+func TestValidator_CrossModuleReference_WithImport_Valid(t *testing.T) {
+	// auth.tg
+	authSchema := `
+struct Token {
+	value: string
+	expires: int64
+}
+
+struct User {
+	id: int64
+	name: string
+}
+`
+
+	// main.tg
+	mainSchema := `
+import auth
+
+struct Session {
+	user: auth.User
+	token: auth.Token
+	created: int64
+}
+`
+
+	authProgram, err := parser.Parse(strings.NewReader(authSchema), "auth.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse auth schema: %v", err)
+	}
+
+	mainProgram, err := parser.Parse(strings.NewReader(mainSchema), "main.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse main schema: %v", err)
+	}
+
+	module := ast.NewModule("test", map[string]*ast.ProgramNode{
+		"auth.tg": authProgram,
+		"main.tg": mainProgram,
+	})
+
+	validator := NewValidator()
+	result := validator.Validate(module)
+
+	if result.HasErrors() {
+		t.Errorf("Cross-module reference with import should be valid, but got errors: %s", result.String())
+	}
+}
+
+func TestValidator_CrossModuleReference_WithoutImport_Invalid(t *testing.T) {
+	// auth.tg
+	authSchema := `
+struct Token {
+	value: string
+	expires: int64
+}
+`
+
+	// main.tg - no import statement
+	mainSchema := `
+struct Session {
+	token: auth.Token
+	created: int64
+}
+`
+
+	authProgram, err := parser.Parse(strings.NewReader(authSchema), "auth.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse auth schema: %v", err)
+	}
+
+	mainProgram, err := parser.Parse(strings.NewReader(mainSchema), "main.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse main schema: %v", err)
+	}
+
+	module := ast.NewModule("test", map[string]*ast.ProgramNode{
+		"auth.tg": authProgram,
+		"main.tg": mainProgram,
+	})
+
+	validator := NewValidator()
+	result := validator.Validate(module)
+
+	if !result.HasErrors() {
+		t.Error("Cross-module reference without import should be invalid")
+	}
+
+	// Check that we got the expected error
+	found := false
+	for _, err := range result.Errors {
+		if strings.Contains(err.Message, "unimported module 'auth'") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected error about unimported module 'auth', got: %s", result.String())
+	}
+}
+
+func TestValidator_CrossModuleReference_UndefinedType_Invalid(t *testing.T) {
+	// auth.tg - doesn't have Token type
+	authSchema := `
+struct User {
+	id: int64
+	name: string
+}
+`
+
+	// main.tg
+	mainSchema := `
+import auth
+
+struct Session {
+	user: auth.User
+	token: auth.Token
+	created: int64
+}
+`
+
+	authProgram, err := parser.Parse(strings.NewReader(authSchema), "auth.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse auth schema: %v", err)
+	}
+
+	mainProgram, err := parser.Parse(strings.NewReader(mainSchema), "main.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse main schema: %v", err)
+	}
+
+	module := ast.NewModule("test", map[string]*ast.ProgramNode{
+		"auth.tg": authProgram,
+		"main.tg": mainProgram,
+	})
+
+	validator := NewValidator()
+	result := validator.Validate(module)
+
+	if !result.HasErrors() {
+		t.Error("Reference to undefined type should be invalid")
+	}
+
+	// Check that we got the expected error
+	found := false
+	for _, err := range result.Errors {
+		if strings.Contains(err.Message, "undefined type 'Token' in module 'auth'") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected error about undefined type 'Token' in module 'auth', got: %s", result.String())
+	}
+}
+
+func TestValidator_CrossModuleReference_NestedModules(t *testing.T) {
+	// auth/user.tg
+	userSchema := `
+struct User {
+	id: int64
+	name: string
+}
+`
+
+	// auth/token.tg  
+	tokenSchema := `
+struct Token {
+	value: string
+	expires: int64
+}
+`
+
+	// main.tg
+	mainSchema := `
+import auth.user
+import auth.token
+
+struct Session {
+	user: user.User
+	token: token.Token
+	created: int64
+}
+`
+
+	userProgram, err := parser.Parse(strings.NewReader(userSchema), "user.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse user schema: %v", err)
+	}
+
+	tokenProgram, err := parser.Parse(strings.NewReader(tokenSchema), "token.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse token schema: %v", err)
+	}
+
+	mainProgram, err := parser.Parse(strings.NewReader(mainSchema), "main.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse main schema: %v", err)
+	}
+
+	// Create nested module structure
+	authModule := ast.NewModule("auth", map[string]*ast.ProgramNode{
+		"user.tg":  userProgram,
+		"token.tg": tokenProgram,
+	})
+
+	mainModule := ast.NewModule("main", map[string]*ast.ProgramNode{
+		"main.tg": mainProgram,
+	})
+	mainModule.SubModules = map[string]*ast.Module{
+		"auth": authModule,
+	}
+
+	validator := NewValidator()
+	result := validator.Validate(mainModule)
+
+	if result.HasErrors() {
+		t.Errorf("Nested module reference should be valid, but got errors: %s", result.String())
+	}
+}

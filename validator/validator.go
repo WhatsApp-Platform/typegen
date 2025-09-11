@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/WhatsApp-Platform/typegen/parser/ast"
 )
@@ -10,18 +11,21 @@ import (
 type Validator struct {
 	registry *TypeRegistry
 	result   *ValidationResult
+	imports  map[string]map[string]string // filename -> imported module -> module path
 }
 
 // NewValidator creates a new validator instance
 func NewValidator() *Validator {
 	return &Validator{
-		result: NewValidationResult(),
+		result:  NewValidationResult(),
+		imports: make(map[string]map[string]string),
 	}
 }
 
 // Validate validates an entire module and returns validation results
 func (v *Validator) Validate(module *ast.Module) *ValidationResult {
 	v.result = NewValidationResult()
+	v.imports = make(map[string]map[string]string)
 	v.registry = buildTypeRegistry(module)
 
 	// Validate all files in the module recursively
@@ -70,9 +74,19 @@ func (v *Validator) validateProgram(program *ast.ProgramNode, filename string) {
 	// Track names in this file to detect duplicates
 	declNames := make(map[string]ast.Declaration)
 
-	// Validate imports
+	// Initialize imports map for this file
+	v.imports[filename] = make(map[string]string)
+
+	// Validate imports and track them
 	for _, imp := range program.Imports {
 		v.validateImport(imp, filename)
+		
+		// Extract the last component of the import path as the module name
+		parts := strings.Split(imp.Path, ".")
+		if len(parts) > 0 {
+			moduleName := parts[len(parts)-1]
+			v.imports[filename][moduleName] = imp.Path
+		}
 	}
 
 	// Validate declarations
@@ -325,15 +339,57 @@ func (v *Validator) validatePrimitiveType(primitive *ast.PrimitiveType, filename
 
 // validateNamedType validates a named type reference
 func (v *Validator) validateNamedType(named *ast.NamedType, filename string, line, column int) {
-	// Check if type exists
-	if !v.registry.TypeExists(named.Name, filename) {
-		v.result.AddError(
-			UndefinedTypeError,
-			fmt.Sprintf("undefined type '%s'", named.Name),
-			filename,
-			line, column,
-			"define the type or check the spelling",
-		)
+	// Check if it's a qualified type (contains a dot)
+	if strings.Contains(named.Name, ".") {
+		parts := strings.SplitN(named.Name, ".", 2)
+		if len(parts) != 2 {
+			v.result.AddError(
+				UndefinedTypeError,
+				fmt.Sprintf("invalid qualified type '%s'", named.Name),
+				filename,
+				line, column,
+				"use module.Type format for qualified types",
+			)
+			return
+		}
+
+		moduleName := parts[0]
+		typeName := parts[1]
+
+		// Check if the module is imported
+		fileImports, exists := v.imports[filename]
+		if !exists || fileImports[moduleName] == "" {
+			v.result.AddError(
+				UndefinedTypeError,
+				fmt.Sprintf("type '%s' refers to unimported module '%s'", named.Name, moduleName),
+				filename,
+				line, column,
+				fmt.Sprintf("add 'import %s' or check module name", moduleName),
+			)
+			return
+		}
+
+		// Check if the qualified type exists
+		if !v.registry.QualifiedTypeExists(named.Name, fileImports[moduleName]) {
+			v.result.AddError(
+				UndefinedTypeError,
+				fmt.Sprintf("undefined type '%s' in module '%s'", typeName, moduleName),
+				filename,
+				line, column,
+				"define the type in the imported module or check the spelling",
+			)
+		}
+	} else {
+		// Regular type - check local scope first, then imported types
+		if !v.registry.TypeExists(named.Name, filename) {
+			v.result.AddError(
+				UndefinedTypeError,
+				fmt.Sprintf("undefined type '%s'", named.Name),
+				filename,
+				line, column,
+				"define the type or check the spelling",
+			)
+		}
 	}
 }
 
