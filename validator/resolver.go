@@ -78,15 +78,32 @@ func (r *TypeRegistry) TypeExists(name, currentFile string) bool {
 		return true
 	}
 	
-	// Check if it's a cross-file reference
-	// For now, we'll check all files in the module
-	for qualName := range r.types {
+	// For unqualified names, check within the same module (directory)
+	// Get the module (directory) for the current file
+	currentModule := r.getModuleFromFile(currentFile)
+	
+	// Check if type exists in the same module
+	for qualName, typeInfo := range r.types {
 		if strings.HasSuffix(qualName, "::"+name) {
-			return true
+			// Check if this type belongs to the same module (directory)
+			typeModule := r.getModuleFromFile(typeInfo.File)
+			if typeModule == currentModule {
+				return true
+			}
 		}
 	}
 	
 	return false
+}
+
+// getModuleFromFile extracts the module (directory) from a file path
+func (r *TypeRegistry) getModuleFromFile(file string) string {
+	// Extract directory part of the file path
+	// e.g., "auth/token.tg" -> "auth", "main.tg" -> ""
+	if idx := strings.LastIndex(file, "/"); idx >= 0 {
+		return file[:idx]
+	}
+	return "" // Root module
 }
 
 // QualifiedTypeExists checks if a qualified type exists for a given module path

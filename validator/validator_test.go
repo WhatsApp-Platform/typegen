@@ -31,7 +31,7 @@ const MAX_USERS = 1000
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -56,7 +56,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -67,7 +67,7 @@ struct User {
 	if !result.HasErrors() {
 		t.Error("Expected validation errors for undefined types")
 	}
-	
+
 	foundUndefinedError := false
 	for _, err := range result.Errors {
 		if err.Type == UndefinedTypeError && strings.Contains(err.Message, "NonExistentType") {
@@ -91,7 +91,7 @@ struct user_info {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -102,7 +102,7 @@ struct user_info {
 	if !result.HasErrors() {
 		t.Error("Expected naming convention error")
 	}
-	
+
 	foundNamingError := false
 	for _, err := range result.Errors {
 		if err.Type == NamingConventionError && strings.Contains(err.Message, "PascalCase") {
@@ -126,7 +126,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -137,7 +137,7 @@ struct User {
 	if !result.HasErrors() {
 		t.Error("Expected naming convention error")
 	}
-	
+
 	foundNamingError := false
 	for _, err := range result.Errors {
 		if err.Type == NamingConventionError && strings.Contains(err.Message, "snake_case") {
@@ -163,7 +163,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -174,7 +174,7 @@ struct User {
 	if !result.HasErrors() {
 		t.Error("Expected duplicate field error")
 	}
-	
+
 	foundDuplicateError := false
 	for _, err := range result.Errors {
 		if err.Type == DuplicateFieldError {
@@ -198,7 +198,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -209,13 +209,13 @@ struct User {
 	if !result.HasErrors() {
 		t.Error("Expected validation errors for 'integer'")
 	}
-	
+
 	// "integer" should either be an invalid primitive type OR an undefined type
 	// (since it's not PascalCase, it could be treated as a NamedType that doesn't exist)
 	foundExpectedError := false
 	for _, err := range result.Errors {
 		if (err.Type == InvalidPrimitiveError && strings.Contains(err.Message, "integer")) ||
-		   (err.Type == UndefinedTypeError && strings.Contains(err.Message, "integer")) {
+			(err.Type == UndefinedTypeError && strings.Contains(err.Message, "integer")) {
 			foundExpectedError = true
 			break
 		}
@@ -236,7 +236,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Failed to parse schema: %v", err)
 	}
-	
+
 	module := ast.NewModule("test", map[string]*ast.ProgramNode{
 		"test.tg": program,
 	})
@@ -247,7 +247,7 @@ struct User {
 	if !result.HasErrors() {
 		t.Error("Expected invalid map key error")
 	}
-	
+
 	foundMapKeyError := false
 	for _, err := range result.Errors {
 		if err.Type == InvalidMapKeyError {
@@ -268,7 +268,7 @@ func TestNamingConventionRules(t *testing.T) {
 	if IsValidSnakeCase("UserName") {
 		t.Error("UserName should not be valid snake_case")
 	}
-	
+
 	// Test PascalCase validation
 	if !IsValidPascalCase("UserName") {
 		t.Error("UserName should be valid PascalCase")
@@ -276,7 +276,7 @@ func TestNamingConventionRules(t *testing.T) {
 	if IsValidPascalCase("user_name") {
 		t.Error("user_name should not be valid PascalCase")
 	}
-	
+
 	// Test CONSTANT_CASE validation
 	if !IsValidConstantCase("MAX_SIZE") {
 		t.Error("MAX_SIZE should be valid CONSTANT_CASE")
@@ -377,7 +377,7 @@ struct NodeB {
 	if err != nil {
 		t.Fatalf("Failed to parse schema A: %v", err)
 	}
-	
+
 	programB, err := parser.Parse(strings.NewReader(schemaB), "b.tg")
 	if err != nil {
 		t.Fatalf("Failed to parse schema B: %v", err)
@@ -522,6 +522,65 @@ struct Session {
 	}
 }
 
+func TestValidator_CrossModuleReference_WithoutImportOrNamespace_Invalid(t *testing.T) {
+	// auth/token.tg - separate module
+	authTokenSchema := `
+struct Token {
+	value: string
+	expires: int64
+}
+`
+
+	// main.tg - different module, trying to use Token without qualification
+	mainSchema := `
+struct Session {
+	token: Token
+	created: int64
+}
+`
+
+	authTokenProgram, err := parser.Parse(strings.NewReader(authTokenSchema), "token.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse auth token schema: %v", err)
+	}
+
+	mainProgram, err := parser.Parse(strings.NewReader(mainSchema), "main.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse main schema: %v", err)
+	}
+
+	// Create separate modules (auth and main)
+	authModule := ast.NewModule("auth", map[string]*ast.ProgramNode{
+		"token.tg": authTokenProgram,
+	})
+
+	mainModule := ast.NewModule("main", map[string]*ast.ProgramNode{
+		"main.tg": mainProgram,
+	})
+	mainModule.SubModules = map[string]*ast.Module{
+		"auth": authModule,
+	}
+
+	validator := NewValidator()
+	result := validator.Validate(mainModule)
+
+	if !result.HasErrors() {
+		t.Error("Cross-module reference without import should be invalid")
+	}
+
+	// Should get undefined type error since Token doesn't exist in main module
+	found := false
+	for _, err := range result.Errors {
+		if strings.Contains(err.Message, "undefined type 'Token'") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected error about undefined type 'Token', got: %s", result.String())
+	}
+}
+
 func TestValidator_CrossModuleReference_UndefinedType_Invalid(t *testing.T) {
 	// auth.tg - doesn't have Token type
 	authSchema := `
@@ -586,7 +645,7 @@ struct User {
 }
 `
 
-	// auth/token.tg  
+	// auth/token.tg
 	tokenSchema := `
 struct Token {
 	value: string
