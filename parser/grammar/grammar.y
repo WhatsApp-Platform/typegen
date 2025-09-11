@@ -3,7 +3,7 @@ package grammar
 
 import (
 	"fmt"
-	"github.com/andfenastari/typegen/parser/ast"
+	"github.com/WhatsApp-Platform/typegen/parser/ast"
 )
 %}
 
@@ -92,7 +92,10 @@ import_list:
 
 import_stmt:
     IMPORT module_path {
-        $$ = &ast.ImportNode{Path: $2}
+        $$ = &ast.ImportNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+            Path: $2,
+        }
     }
 
 module_path:
@@ -120,6 +123,7 @@ declaration:
 struct_decl:
     STRUCT IDENTIFIER LBRACE field_list RBRACE {
         $$ = &ast.StructNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:   $2,
             Fields: $4,
         }
@@ -144,6 +148,7 @@ non_empty_field_list:
 field:
     IDENTIFIER COLON type_expr {
         $$ = &ast.FieldNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:     $1,
             Type:     $3,
             Optional: false,
@@ -151,6 +156,7 @@ field:
     }
 |   IDENTIFIER COLON QUESTION type_expr {
         $$ = &ast.FieldNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:     $1,
             Type:     $4,
             Optional: true,
@@ -160,6 +166,7 @@ field:
 enum_decl:
     ENUM IDENTIFIER LBRACE variant_list RBRACE {
         $$ = &ast.EnumNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:     $2,
             Variants: $4,
         }
@@ -176,12 +183,14 @@ variant_list:
 variant:
     IDENTIFIER {
         $$ = &ast.EnumVariantNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:    $1,
             Payload: nil,
         }
     }
 |   IDENTIFIER COLON type_expr {
         $$ = &ast.EnumVariantNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:    $1,
             Payload: $3,
         }
@@ -190,6 +199,7 @@ variant:
 type_alias:
     TYPE IDENTIFIER EQUALS type_expr {
         $$ = &ast.TypeAliasNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name: $2,
             Type: $4,
         }
@@ -202,6 +212,7 @@ const_decl:
             return 1
         }
         $$ = &ast.ConstantNode{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Name:  $2,
             Value: $4,
         }
@@ -210,11 +221,13 @@ const_decl:
 constant_value:
     NUMBER_LITERAL {
         $$ = &ast.IntConstant{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Value: $1,
         }
     }
 |   STRING_LITERAL {
         $$ = &ast.StringConstant{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
             Value: $1,
         }
     }
@@ -222,13 +235,22 @@ constant_value:
 type_expr:
     primitive_type { $$ = $1 }
 |   qualified_name {
-        $$ = &ast.NamedType{Name: $1}
+        $$ = &ast.NamedType{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+            Name: $1,
+        }
     }
 |   LBRACKET RBRACKET type_expr {
-        $$ = &ast.ArrayType{ElementType: $3}
+        $$ = &ast.ArrayType{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+            ElementType: $3,
+        }
     }
 |   LBRACKET type_expr RBRACKET type_expr {
-        $$ = &ast.MapType{KeyType: $2, ValueType: $4}
+        $$ = &ast.MapType{
+            BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+            KeyType: $2, ValueType: $4,
+        }
     }
 
 qualified_name:
@@ -240,29 +262,29 @@ qualified_name:
     }
 
 primitive_type:
-    INT8       { $$ = &ast.PrimitiveType{Name: "int8"} }
-|   INT16      { $$ = &ast.PrimitiveType{Name: "int16"} }
-|   INT32      { $$ = &ast.PrimitiveType{Name: "int32"} }
-|   INT64      { $$ = &ast.PrimitiveType{Name: "int64"} }
-|   INT        { $$ = &ast.PrimitiveType{Name: "int"} }
-|   BIGINT     { $$ = &ast.PrimitiveType{Name: "bigint"} }
-|   NAT8       { $$ = &ast.PrimitiveType{Name: "nat8"} }
-|   NAT16      { $$ = &ast.PrimitiveType{Name: "nat16"} }
-|   NAT32      { $$ = &ast.PrimitiveType{Name: "nat32"} }
-|   NAT64      { $$ = &ast.PrimitiveType{Name: "nat64"} }
-|   NAT        { $$ = &ast.PrimitiveType{Name: "nat"} }
-|   BIGNAT     { $$ = &ast.PrimitiveType{Name: "bignat"} }
-|   FLOAT32    { $$ = &ast.PrimitiveType{Name: "float32"} }
-|   FLOAT64    { $$ = &ast.PrimitiveType{Name: "float64"} }
-|   DECIMAL    { $$ = &ast.PrimitiveType{Name: "decimal"} }
-|   STRING     { $$ = &ast.PrimitiveType{Name: "string"} }
-|   BOOL       { $$ = &ast.PrimitiveType{Name: "bool"} }
-|   JSON       { $$ = &ast.PrimitiveType{Name: "json"} }
-|   TIME       { $$ = &ast.PrimitiveType{Name: "time"} }
-|   DATE       { $$ = &ast.PrimitiveType{Name: "date"} }
-|   DATETIME   { $$ = &ast.PrimitiveType{Name: "datetime"} }
-|   TIMETZ     { $$ = &ast.PrimitiveType{Name: "timetz"} }
-|   DATETZ     { $$ = &ast.PrimitiveType{Name: "datetz"} }
-|   DATETIMETZ { $$ = &ast.PrimitiveType{Name: "datetimetz"} }
+    INT8       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int8"} }
+|   INT16      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int16"} }
+|   INT32      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int32"} }
+|   INT64      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int64"} }
+|   INT        { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int"} }
+|   BIGINT     { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bigint"} }
+|   NAT8       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat8"} }
+|   NAT16      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat16"} }
+|   NAT32      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat32"} }
+|   NAT64      { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat64"} }
+|   NAT        { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat"} }
+|   BIGNAT     { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bignat"} }
+|   FLOAT32    { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "float32"} }
+|   FLOAT64    { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "float64"} }
+|   DECIMAL    { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "decimal"} }
+|   STRING     { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "string"} }
+|   BOOL       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bool"} }
+|   JSON       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "json"} }
+|   TIME       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "time"} }
+|   DATE       { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "date"} }
+|   DATETIME   { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetime"} }
+|   TIMETZ     { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "timetz"} }
+|   DATETZ     { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetz"} }
+|   DATETIMETZ { $$ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetimetz"} }
 
 %%

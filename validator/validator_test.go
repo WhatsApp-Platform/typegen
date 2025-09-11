@@ -357,3 +357,67 @@ func TestNamingConventionSuggestions(t *testing.T) {
 		t.Error("Expected userName -> USER_NAME")
 	}
 }
+
+func TestValidator_CircularDependencies_Allowed(t *testing.T) {
+	schemaA := `
+struct NodeA {
+	id: string
+	b_node: NodeB
+}
+`
+
+	schemaB := `
+struct NodeB {
+	id: string
+	a_node: NodeA
+}
+`
+
+	programA, err := parser.Parse(strings.NewReader(schemaA), "a.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse schema A: %v", err)
+	}
+	
+	programB, err := parser.Parse(strings.NewReader(schemaB), "b.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse schema B: %v", err)
+	}
+
+	module := ast.NewModule("test", map[string]*ast.ProgramNode{
+		"a.tg": programA,
+		"b.tg": programB,
+	})
+
+	validator := NewValidator()
+	result := validator.Validate(module)
+
+	if result.HasErrors() {
+		t.Errorf("Circular dependencies should be allowed, but got errors: %s", result.String())
+	}
+}
+
+func TestValidator_SelfReference_Allowed(t *testing.T) {
+	schema := `
+struct TreeNode {
+	value: string
+	children: []TreeNode
+	parent: ?TreeNode
+}
+`
+
+	program, err := parser.Parse(strings.NewReader(schema), "tree.tg")
+	if err != nil {
+		t.Fatalf("Failed to parse schema: %v", err)
+	}
+
+	module := ast.NewModule("test", map[string]*ast.ProgramNode{
+		"tree.tg": program,
+	})
+
+	validator := NewValidator()
+	result := validator.Validate(module)
+
+	if result.HasErrors() {
+		t.Errorf("Self-references should be allowed, but got errors: %s", result.String())
+	}
+}

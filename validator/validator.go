@@ -2,7 +2,6 @@ package validator
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/WhatsApp-Platform/typegen/parser/ast"
 )
@@ -27,9 +26,6 @@ func (v *Validator) Validate(module *ast.Module) *ValidationResult {
 
 	// Validate all files in the module recursively
 	v.validateModule(module, "")
-
-	// Check for circular dependencies after all types are registered
-	v.validateCircularDependencies()
 
 	return v.result
 }
@@ -386,27 +382,3 @@ func (v *Validator) validateOptionalType(optional *ast.OptionalType, filename st
 	v.validateType(optional.ElementType, filename, line, column)
 }
 
-// validateCircularDependencies checks for circular dependencies
-func (v *Validator) validateCircularDependencies() {
-	cycles := v.registry.ValidateCircularDependencies()
-
-	for _, cycle := range cycles {
-		// Find the first type in the cycle to report the error
-		types := strings.Split(cycle, " -> ")
-		if len(types) > 0 {
-			firstType := types[0]
-			parts := strings.Split(firstType, "::")
-			if len(parts) == 2 {
-				file := parts[0]
-
-				v.result.AddError(
-					CircularDependencyError,
-					fmt.Sprintf("circular dependency detected: %s", cycle),
-					file,
-					0, 0, // We don't have exact position for circular deps
-					"restructure types to eliminate circular references",
-				)
-			}
-		}
-	}
-}

@@ -139,7 +139,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line grammar.y:268
+//line grammar.y:290
 
 //line yacctab:1
 var yyExca = [...]int8{
@@ -619,94 +619,99 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line grammar.y:94
 		{
-			yyVAL.import_ = &ast.ImportNode{Path: yyDollar[2].str}
+			yyVAL.import_ = &ast.ImportNode{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Path:     yyDollar[2].str,
+			}
 		}
 	case 6:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:99
+//line grammar.y:102
 		{
 			yyVAL.str = yyDollar[1].ident
 		}
 	case 7:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line grammar.y:102
+//line grammar.y:105
 		{
 			yyVAL.str = yyDollar[1].str + "." + yyDollar[3].ident
 		}
 	case 8:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:107
+//line grammar.y:110
 		{
 			yyVAL.decls = []ast.Declaration{yyDollar[1].decl}
 		}
 	case 9:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line grammar.y:110
+//line grammar.y:113
 		{
 			yyVAL.decls = append(yyDollar[1].decls, yyDollar[2].decl)
 		}
 	case 10:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:115
+//line grammar.y:118
 		{
 			yyVAL.decl = yyDollar[1].struct_
 		}
 	case 11:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:116
+//line grammar.y:119
 		{
 			yyVAL.decl = yyDollar[1].enum_
 		}
 	case 12:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:117
+//line grammar.y:120
 		{
 			yyVAL.decl = yyDollar[1].typedef
 		}
 	case 13:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:118
+//line grammar.y:121
 		{
 			yyVAL.decl = yyDollar[1].const_
 		}
 	case 14:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line grammar.y:121
+//line grammar.y:124
 		{
 			yyVAL.struct_ = &ast.StructNode{
-				Name:   yyDollar[2].ident,
-				Fields: yyDollar[4].fields,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[2].ident,
+				Fields:   yyDollar[4].fields,
 			}
 		}
 	case 15:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line grammar.y:129
+//line grammar.y:133
 		{
 			yyVAL.fields = nil
 		}
 	case 16:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:132
+//line grammar.y:136
 		{
 			yyVAL.fields = yyDollar[1].fields
 		}
 	case 17:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:137
+//line grammar.y:141
 		{
 			yyVAL.fields = []*ast.FieldNode{yyDollar[1].field}
 		}
 	case 18:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line grammar.y:140
+//line grammar.y:144
 		{
 			yyVAL.fields = append(yyDollar[1].fields, yyDollar[2].field)
 		}
 	case 19:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line grammar.y:145
+//line grammar.y:149
 		{
 			yyVAL.field = &ast.FieldNode{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
 				Name:     yyDollar[1].ident,
 				Type:     yyDollar[3].type_,
 				Optional: false,
@@ -714,9 +719,10 @@ yydefault:
 		}
 	case 20:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line grammar.y:152
+//line grammar.y:157
 		{
 			yyVAL.field = &ast.FieldNode{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
 				Name:     yyDollar[1].ident,
 				Type:     yyDollar[4].type_,
 				Optional: true,
@@ -724,260 +730,276 @@ yydefault:
 		}
 	case 21:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line grammar.y:161
+//line grammar.y:167
 		{
 			yyVAL.enum_ = &ast.EnumNode{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
 				Name:     yyDollar[2].ident,
 				Variants: yyDollar[4].variants,
 			}
 		}
 	case 22:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:169
+//line grammar.y:176
 		{
 			yyVAL.variants = []*ast.EnumVariantNode{yyDollar[1].variant}
 		}
 	case 23:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line grammar.y:172
+//line grammar.y:179
 		{
 			yyVAL.variants = append(yyDollar[1].variants, yyDollar[2].variant)
 		}
 	case 24:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:177
+//line grammar.y:184
 		{
 			yyVAL.variant = &ast.EnumVariantNode{
-				Name:    yyDollar[1].ident,
-				Payload: nil,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[1].ident,
+				Payload:  nil,
 			}
 		}
 	case 25:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line grammar.y:183
+//line grammar.y:191
 		{
 			yyVAL.variant = &ast.EnumVariantNode{
-				Name:    yyDollar[1].ident,
-				Payload: yyDollar[3].type_,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[1].ident,
+				Payload:  yyDollar[3].type_,
 			}
 		}
 	case 26:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line grammar.y:191
+//line grammar.y:200
 		{
 			yyVAL.typedef = &ast.TypeAliasNode{
-				Name: yyDollar[2].ident,
-				Type: yyDollar[4].type_,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[2].ident,
+				Type:     yyDollar[4].type_,
 			}
 		}
 	case 27:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line grammar.y:199
+//line grammar.y:209
 		{
 			if !IsConstantCase(yyDollar[2].ident) {
 				yylex.(*Lexer).Error(fmt.Sprintf("constant name '%s' must be in CONSTANT_CASE format", yyDollar[2].ident))
 				return 1
 			}
 			yyVAL.const_ = &ast.ConstantNode{
-				Name:  yyDollar[2].ident,
-				Value: yyDollar[4].constval,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[2].ident,
+				Value:    yyDollar[4].constval,
 			}
 		}
 	case 28:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:211
+//line grammar.y:222
 		{
 			yyVAL.constval = &ast.IntConstant{
-				Value: yyDollar[1].num,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Value:    yyDollar[1].num,
 			}
 		}
 	case 29:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:216
+//line grammar.y:228
 		{
 			yyVAL.constval = &ast.StringConstant{
-				Value: yyDollar[1].str,
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Value:    yyDollar[1].str,
 			}
 		}
 	case 30:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:223
+//line grammar.y:236
 		{
 			yyVAL.type_ = yyDollar[1].type_
 		}
 	case 31:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:224
+//line grammar.y:237
 		{
-			yyVAL.type_ = &ast.NamedType{Name: yyDollar[1].str}
+			yyVAL.type_ = &ast.NamedType{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				Name:     yyDollar[1].str,
+			}
 		}
 	case 32:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line grammar.y:227
+//line grammar.y:243
 		{
-			yyVAL.type_ = &ast.ArrayType{ElementType: yyDollar[3].type_}
+			yyVAL.type_ = &ast.ArrayType{
+				BaseNode:    ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				ElementType: yyDollar[3].type_,
+			}
 		}
 	case 33:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line grammar.y:230
+//line grammar.y:249
 		{
-			yyVAL.type_ = &ast.MapType{KeyType: yyDollar[2].type_, ValueType: yyDollar[4].type_}
+			yyVAL.type_ = &ast.MapType{
+				BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}},
+				KeyType:  yyDollar[2].type_, ValueType: yyDollar[4].type_,
+			}
 		}
 	case 34:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:235
+//line grammar.y:257
 		{
 			yyVAL.str = yyDollar[1].ident
 		}
 	case 35:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line grammar.y:238
+//line grammar.y:260
 		{
 			yyVAL.str = yyDollar[1].str + "." + yyDollar[3].ident
 		}
 	case 36:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:243
+//line grammar.y:265
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "int8"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int8"}
 		}
 	case 37:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:244
+//line grammar.y:266
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "int16"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int16"}
 		}
 	case 38:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:245
+//line grammar.y:267
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "int32"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int32"}
 		}
 	case 39:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:246
+//line grammar.y:268
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "int64"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int64"}
 		}
 	case 40:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:247
+//line grammar.y:269
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "int"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "int"}
 		}
 	case 41:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:248
+//line grammar.y:270
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "bigint"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bigint"}
 		}
 	case 42:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:249
+//line grammar.y:271
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "nat8"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat8"}
 		}
 	case 43:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:250
+//line grammar.y:272
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "nat16"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat16"}
 		}
 	case 44:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:251
+//line grammar.y:273
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "nat32"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat32"}
 		}
 	case 45:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:252
+//line grammar.y:274
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "nat64"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat64"}
 		}
 	case 46:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:253
+//line grammar.y:275
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "nat"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "nat"}
 		}
 	case 47:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:254
+//line grammar.y:276
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "bignat"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bignat"}
 		}
 	case 48:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:255
+//line grammar.y:277
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "float32"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "float32"}
 		}
 	case 49:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:256
+//line grammar.y:278
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "float64"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "float64"}
 		}
 	case 50:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:257
+//line grammar.y:279
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "decimal"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "decimal"}
 		}
 	case 51:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:258
+//line grammar.y:280
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "string"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "string"}
 		}
 	case 52:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:259
+//line grammar.y:281
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "bool"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "bool"}
 		}
 	case 53:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:260
+//line grammar.y:282
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "json"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "json"}
 		}
 	case 54:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:261
+//line grammar.y:283
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "time"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "time"}
 		}
 	case 55:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:262
+//line grammar.y:284
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "date"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "date"}
 		}
 	case 56:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:263
+//line grammar.y:285
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "datetime"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetime"}
 		}
 	case 57:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:264
+//line grammar.y:286
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "timetz"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "timetz"}
 		}
 	case 58:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:265
+//line grammar.y:287
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "datetz"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetz"}
 		}
 	case 59:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line grammar.y:266
+//line grammar.y:288
 		{
-			yyVAL.type_ = &ast.PrimitiveType{Name: "datetimetz"}
+			yyVAL.type_ = &ast.PrimitiveType{BaseNode: ast.BaseNode{Position: ast.Position{Filename: yylex.(*Lexer).filename, Line: yylex.(*Lexer).scanner.Line, Column: yylex.(*Lexer).scanner.Column}}, Name: "datetimetz"}
 		}
 	}
 	goto yystack /* stack new state and value */

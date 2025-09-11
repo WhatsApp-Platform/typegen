@@ -66,6 +66,55 @@ typegen/
 
 ## Key Tools and Technologies
 
+### Version Control System (Jujutsu)
+This project uses **Jujutsu (jj)** as the primary VCS instead of Git. Key advantages:
+- **No staging area**: All changes are automatically tracked
+- **Powerful rewriting**: Safe history editing and branch management
+- **Excellent conflict resolution**: Better merge conflict handling
+- **Fast operations**: Optimized for performance
+
+#### **Common jj Commands:**
+```bash
+# Check current status and changes
+jj status
+
+# Create a new commit with current changes  
+jj commit -m "commit message"
+
+# Move main bookmark to current commit (like git push to main)
+jj bookmark set main
+
+# Show commit history
+jj log
+
+# View differences
+jj diff
+
+# Create and switch to new branch
+jj new -m "description" 
+
+# Rebase current changes onto main
+jj rebase -d main
+
+# Undo the last commit (keeps changes in working copy)
+jj undo
+```
+
+#### **Commit Message Format:**
+Follow this format for consistency:
+```
+Brief description of changes
+
+Features:
+- Feature 1 explanation
+- Feature 2 explanation  
+- etc.
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
 ### Go Tools Integration
 - Go now has custom tools support: `go get -tool <path>/<tool>`
 - Execute with `go tool <tool>`

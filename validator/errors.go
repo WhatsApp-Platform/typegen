@@ -13,7 +13,6 @@ const (
 	// Type-related errors
 	UndefinedTypeError   ValidationErrorType = "undefined_type"
 	InvalidPrimitiveError ValidationErrorType = "invalid_primitive"
-	CircularDependencyError ValidationErrorType = "circular_dependency"
 	InvalidMapKeyError    ValidationErrorType = "invalid_map_key"
 	
 	// Naming convention errors

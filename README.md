@@ -314,7 +314,6 @@ TypeGen enforces strict rules for consistency:
 - **Undefined types**: All type references must exist or be primitives
 - **Map keys**: Only string and integer types allowed as map keys
 - **Optional types**: No double-wrapping (`??Type` is invalid)
-- **Circular dependencies**: Detected and reported with cycle path
 
 #### **Duplicate Prevention**
 - **No duplicate type names** within a module
