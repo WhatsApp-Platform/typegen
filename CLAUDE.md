@@ -52,6 +52,12 @@ typegen/
 │   ├── config_test.go     # Configuration tests
 │   ├── builder.go         # Build orchestration and execution
 │   └── builder_test.go    # Builder tests
+├── validator/             # Schema validation system
+│   ├── errors.go          # Validation error types and formatting
+│   ├── rules.go           # Naming conventions and primitive type validation
+│   ├── resolver.go        # Type resolution and circular dependency detection
+│   ├── validator.go       # Core validation framework
+│   └── validator_test.go  # Comprehensive validation tests
 └── examples/              # Example .tg files for testing
     ├── simple.tg          # Basic struct example
     ├── user_clean.tg      # Complex example with imports
@@ -90,6 +96,7 @@ typegen/
 - `go test ./generators/python/pydantic` - Run Python+Pydantic generator tests
 - `go test ./generators/go` - Run Go generator tests
 - `go test ./build` - Run build system tests
+- `go test ./validator` - Run validation system tests
 - `go test ./...` - Run all tests in the project
 - `go generate ./parser` - Regenerate parser from grammar
 - All tests currently pass
@@ -101,6 +108,13 @@ typegen/
 - Full TypeGen language support (structs, enums, type aliases, constants, imports)
 - AST generation and manipulation with recursive module support
 - CLI tool for parsing, validation, and code generation
+- **Schema validation system** with comprehensive error checking:
+  - Type resolution and undefined type detection
+  - Naming convention enforcement (snake_case, PascalCase, CONSTANT_CASE)
+  - Duplicate detection (types, fields, variants, constants)
+  - Type safety validation (map keys, optional types, primitive types)
+  - Circular dependency detection with detailed error reporting
+  - Integrated into CLI with `--skip-validation` bypass option
 - **Code generation framework** with pluggable architecture
 - **Python + Pydantic code generator** with full feature support
 - **Go code generator** with JSON marshaling/unmarshaling support
@@ -108,13 +122,13 @@ typegen/
 - **Recursive module parsing** and generation
 - **InMemoryFS testing framework** for generator testing
 - **Global generator registry** for extensibility
-- Comprehensive test suite (parser + generators + build)
+- Comprehensive test suite (parser + generators + build + validator)
 - Complete documentation (README.md, parser/README.md, generators/README.md, generators/go/README.md, generators/python/pydantic/README.md, build/README.md)
 
 🚧 **Next Steps:**
 - Code generation for TypeScript
 - Additional target languages (Rust, Java, C#, etc.)
-- Advanced features (validation, serialization options)
+- Advanced serialization options and custom JSON formats
 - Enhanced cross-module reference support
 
 ✨ **Recently Added:**

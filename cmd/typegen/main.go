@@ -10,6 +10,7 @@ import (
 	"github.com/WhatsApp-Platform/typegen/build"
 	"github.com/WhatsApp-Platform/typegen/generators"
 	"github.com/WhatsApp-Platform/typegen/parser"
+	"github.com/WhatsApp-Platform/typegen/validator"
 	
 	// Import generators to register them
 	_ "github.com/WhatsApp-Platform/typegen/generators/python/pydantic"
@@ -189,6 +190,7 @@ func handleGenerate(args []string) {
 	outputDir := generateCmd.String("o", "", "Output directory for generated code")
 	config := make(configFlags)
 	generateCmd.Var(config, "c", "Configuration option in format key=value (can be used multiple times)")
+	skipValidation := generateCmd.Bool("skip-validation", false, "Skip validation before generation (emergency bypass)")
 	
 	generateCmd.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: typegen generate [flags] <module-directory>\n\n")
@@ -243,6 +245,23 @@ func handleGenerate(args []string) {
 	if err != nil {
 		fmt.Printf("Module parse error in %s:\n%v\n", modulePath, err)
 		os.Exit(1)
+	}
+	
+	// Validate the module before generation (unless skipped)
+	if !*skipValidation {
+		fmt.Printf("Validating module %s...\n", module.Name)
+		v := validator.NewValidator()
+		result := v.Validate(module)
+		
+		if result.HasErrors() {
+			fmt.Fprintf(os.Stderr, "\n%s\n", result.String())
+			fmt.Fprintf(os.Stderr, "\nGeneration aborted due to validation errors.\n")
+			fmt.Fprintf(os.Stderr, "Use --skip-validation to bypass validation (not recommended).\n")
+			os.Exit(1)
+		}
+		fmt.Printf("✅ Module validation passed\n\n")
+	} else {
+		fmt.Printf("⚠️  Skipping validation as requested\n\n")
 	}
 	
 	// Get the generator for the specified name

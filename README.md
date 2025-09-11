@@ -217,6 +217,7 @@ typegen generate -generator <generator> [options] <input-dir> -o <output-dir>
 - `-generator <name>`: Target generator (`go`, `python+pydantic`)
 - `-o <dir>`: Output directory (required)
 - `-c <key=value>`: Configuration override (repeatable)
+- `--skip-validation`: Skip schema validation (emergency use only)
 
 **Examples:**
 ```bash
@@ -259,6 +260,91 @@ typegen build -f production.yaml
 |-----------|-------------|
 | `go` | Go structs with JSON marshaling/unmarshaling |
 | `python+pydantic` | Python classes with Pydantic validation |
+
+## ✅ Schema Validation
+
+TypeGen includes comprehensive validation to catch errors before code generation:
+
+### Automatic Validation
+
+All `generate` and `build` commands automatically validate schemas:
+
+```bash
+# Validation runs automatically
+typegen generate -generator go -o ./output ./schemas
+
+# Example output with validation errors:
+Validating module schemas...
+
+Validation errors found (3):
+
+user.tg:
+  5:1: struct name 'user_info' should follow PascalCase convention
+    Suggestion: use 'UserInfo'
+  8:5: field name 'userID' should follow snake_case convention
+    Suggestion: use 'user_i_d'
+  12:13: undefined type 'ProfileData'
+    Suggestion: define the type or check the spelling
+
+Generation aborted due to validation errors.
+Use --skip-validation to bypass validation (not recommended).
+```
+
+### Skip Validation (Emergency Use)
+
+For emergency situations, you can bypass validation:
+
+```bash
+# Skip validation (not recommended for production)
+typegen generate --skip-validation -generator go -o ./output ./schemas
+```
+
+### Validation Rules
+
+TypeGen enforces strict rules for consistency:
+
+#### **Naming Conventions**
+- **struct/enum/type names**: `PascalCase` (e.g., `UserProfile`, `OrderStatus`)
+- **field/variant names**: `snake_case` (e.g., `user_id`, `created_at`)  
+- **constant names**: `CONSTANT_CASE` (e.g., `MAX_SIZE`, `API_VERSION`)
+- **module names**: `snake_case` with dots (e.g., `auth.session_management`)
+- **primitive types**: `smashcase` (e.g., `int64`, `string`, `datetime`)
+
+#### **Type Safety**
+- **Undefined types**: All type references must exist or be primitives
+- **Map keys**: Only string and integer types allowed as map keys
+- **Optional types**: No double-wrapping (`??Type` is invalid)
+- **Circular dependencies**: Detected and reported with cycle path
+
+#### **Duplicate Prevention**
+- **No duplicate type names** within a module
+- **No duplicate field names** within a struct  
+- **No duplicate variant names** within an enum
+- **No duplicate constant names**
+
+### Validation Examples
+
+**❌ Invalid Schema:**
+```typegen
+struct user_info {           // ❌ should be PascalCase  
+    userID: int64           // ❌ should be snake_case
+    profile: ProfileData    // ❌ undefined type
+    settings: [bool]string  // ❌ bool not valid map key
+}
+
+const max_size = 100        // ❌ should be CONSTANT_CASE
+```
+
+**✅ Valid Schema:**
+```typegen
+struct UserInfo {           // ✅ PascalCase
+    user_id: int64         // ✅ snake_case  
+    profile: ProfileData   // ✅ assuming ProfileData is defined
+    settings: [string]string // ✅ string is valid map key
+}
+
+const MAX_SIZE = 100       // ✅ CONSTANT_CASE
+```
 
 ## 💼 Code Examples
 

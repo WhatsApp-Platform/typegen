@@ -6,6 +6,7 @@ import (
 
 	"github.com/WhatsApp-Platform/typegen/generators"
 	"github.com/WhatsApp-Platform/typegen/parser"
+	"github.com/WhatsApp-Platform/typegen/validator"
 )
 
 // Builder orchestrates the build process
@@ -77,6 +78,14 @@ func (b *Builder) executeTask(ctx context.Context, task GenerateTask, taskIndex 
 	module, err := parser.ParseModuleToAST(task.Input)
 	if err != nil {
 		return fmt.Errorf("failed to parse module: %w", err)
+	}
+	
+	// Validate the module before generation
+	v := validator.NewValidator()
+	result := v.Validate(module)
+	
+	if result.HasErrors() {
+		return fmt.Errorf("validation failed with %d errors:\n%s", result.ErrorCount(), result.String())
 	}
 	
 	// Create filesystem for output
