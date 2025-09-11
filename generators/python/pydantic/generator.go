@@ -50,8 +50,8 @@ func (g *Generator) generateModuleRecursive(ctx context.Context, module *ast.Mod
 		pythonFilename := strings.TrimSuffix(filename, ".tg") + ".py"
 		pythonPath := dest.Join(basePath, pythonFilename)
 
-		// Generate code for this file
-		code, err := g.generateProgram(program)
+		// Generate code for this file with module context for cross-file imports
+		code, err := g.generateProgramWithModule(program, module, filename)
 		if err != nil {
 			return fmt.Errorf("failed to generate code for %s: %w", filename, err)
 		}
@@ -90,8 +90,18 @@ func (g *Generator) generateModuleRecursive(ctx context.Context, module *ast.Mod
 	return nil
 }
 
-// generateProgram converts a TypeGen program to Python code
+// generateProgramWithModule converts a TypeGen program to Python code with module context for cross-file imports
+func (g *Generator) generateProgramWithModule(program *ast.ProgramNode, module *ast.Module, currentFilename string) (string, error) {
+	return g.generateProgramInternal(program, module, currentFilename)
+}
+
+// generateProgram converts a TypeGen program to Python code (for backward compatibility)
 func (g *Generator) generateProgram(program *ast.ProgramNode) (string, error) {
+	return g.generateProgramInternal(program, nil, "")
+}
+
+// generateProgramInternal is the internal implementation that handles both cases
+func (g *Generator) generateProgramInternal(program *ast.ProgramNode, module *ast.Module, currentFilename string) (string, error) {
 	g.importMap = make(map[string]bool)    // Reset imports for each generation
 	g.cyclicTypes = make(map[string]bool)  // Reset cyclic types tracking
 	g.definedTypes = make(map[string]bool) // Reset defined types tracking
@@ -109,6 +119,17 @@ func (g *Generator) generateProgram(program *ast.ProgramNode) (string, error) {
 	}
 	if len(program.Imports) > 0 {
 		parts = append(parts, "")
+	}
+
+	// Generate cross-file imports if module context is available
+	if module != nil {
+		crossFileImports := g.generateCrossFileImports(program, module, currentFilename)
+		if len(crossFileImports) > 0 {
+			for _, crossImport := range crossFileImports {
+				parts = append(parts, crossImport)
+			}
+			parts = append(parts, "")
+		}
 	}
 
 	// Sort declarations topologically, handling circular references
@@ -788,6 +809,105 @@ func (g *Generator) generateInitPy(moduleImports []string, allTypes []string) st
 	}
 
 	return strings.Join(parts, "\n")
+}
+
+// generateCrossFileImports generates import statements for types defined in other files in the same module
+func (g *Generator) generateCrossFileImports(program *ast.ProgramNode, module *ast.Module, currentFilename string) []string {
+	var imports []string
+	referencedTypes := make(map[string]bool)
+	
+	// Collect all types referenced in this program
+	for _, decl := range program.Declarations {
+		g.collectReferencedTypes(decl, referencedTypes)
+	}
+	
+	// Find which file defines each referenced type and generate imports
+	fileToTypes := make(map[string][]string)
+	
+	for typeName := range referencedTypes {
+		// Skip qualified names (they already have module references)
+		if strings.Contains(typeName, ".") {
+			continue
+		}
+		
+		// Find which file in the module defines this type
+		definingFile := g.findTypeDefiningFile(typeName, module, currentFilename)
+		if definingFile != "" {
+			fileToTypes[definingFile] = append(fileToTypes[definingFile], typeName)
+		}
+	}
+	
+	// Generate import statements
+	for filename, types := range fileToTypes {
+		if len(types) > 0 {
+			// Convert filename from .tg to module name
+			moduleName := strings.TrimSuffix(filename, ".tg")
+			// Sort types for consistent output
+			sort.Strings(types)
+			imports = append(imports, fmt.Sprintf("from .%s import %s", moduleName, strings.Join(types, ", ")))
+		}
+	}
+	
+	// Sort imports for consistent output
+	sort.Strings(imports)
+	return imports
+}
+
+// collectReferencedTypes recursively collects all type names referenced in a declaration
+func (g *Generator) collectReferencedTypes(decl ast.Declaration, referencedTypes map[string]bool) {
+	switch d := decl.(type) {
+	case *ast.StructNode:
+		for _, field := range d.Fields {
+			g.collectTypesFromType(field.Type, referencedTypes)
+		}
+	case *ast.EnumNode:
+		for _, variant := range d.Variants {
+			if variant.Payload != nil {
+				g.collectTypesFromType(variant.Payload, referencedTypes)
+			}
+		}
+	case *ast.TypeAliasNode:
+		g.collectTypesFromType(d.Type, referencedTypes)
+	case *ast.ConstantNode:
+		// Constants don't reference types
+	}
+}
+
+// collectTypesFromType recursively extracts type names from a type expression
+func (g *Generator) collectTypesFromType(t ast.Type, referencedTypes map[string]bool) {
+	switch typ := t.(type) {
+	case *ast.PrimitiveType:
+		// Primitive types don't need imports
+	case *ast.NamedType:
+		referencedTypes[typ.Name] = true
+	case *ast.ArrayType:
+		g.collectTypesFromType(typ.ElementType, referencedTypes)
+	case *ast.MapType:
+		g.collectTypesFromType(typ.KeyType, referencedTypes)
+		g.collectTypesFromType(typ.ValueType, referencedTypes)
+	case *ast.OptionalType:
+		g.collectTypesFromType(typ.ElementType, referencedTypes)
+	}
+}
+
+// findTypeDefiningFile finds which file in the module defines the given type name
+func (g *Generator) findTypeDefiningFile(typeName string, module *ast.Module, currentFilename string) string {
+	// Check all files in the module except the current one
+	for filename, program := range module.Files {
+		if filename == currentFilename {
+			continue
+		}
+		
+		// Check if this file defines the type
+		for _, decl := range program.Declarations {
+			declName := g.getDeclName(decl)
+			if declName == typeName {
+				return filename
+			}
+		}
+	}
+	
+	return "" // Type not found in any file
 }
 
 func init() {
