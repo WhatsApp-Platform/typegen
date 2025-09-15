@@ -103,7 +103,7 @@ func (g *Generator) generateProgram(program *ast.ProgramNode, packageName string
 	}
 
 	// Build final code with header, package, and imports
-	result := parts[0] + "\n" // generated header
+	result := parts[0] + "\n"        // generated header
 	result += "\n" + parts[2] + "\n" // package declaration (skip empty line at parts[1])
 
 	imports := g.buildImports()
@@ -235,7 +235,12 @@ func (g *Generator) generateField(field *ast.FieldNode) (string, error) {
 	}
 
 	// Add JSON tag for field mapping
-	jsonTag := fmt.Sprintf("`json:\"%s\"`", field.Name)
+	var jsonTag string
+	if !field.Optional {
+		jsonTag = fmt.Sprintf("`json:\"%s\"`", field.Name)
+	} else {
+		jsonTag = fmt.Sprintf("`json:\"%s,omitempty\"`", field.Name)
+	}
 	return fmt.Sprintf("%s %s %s", goName, goType, jsonTag), nil
 }
 
@@ -575,7 +580,6 @@ func (g *Generator) toPascalCase(name string) string {
 	}
 	return result.String()
 }
-
 
 func init() {
 	// Register the Go generator globally

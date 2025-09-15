@@ -95,7 +95,7 @@ func TestGenerateOptionalFields(t *testing.T) {
 		"package test",
 		"type User struct {",
 		"Id int64 `json:\"id\"`",
-		"Email *string `json:\"email\"`",
+		"Email *string `json:\"email,omitempty\"`",
 		"}",
 	}
 
@@ -321,7 +321,7 @@ func TestGenerateSimpleEnumJSONSerialization(t *testing.T) {
 		"case \"active\":",
 		"*e = Status_Active",
 		"case \"inactive\":",
-		"*e = Status_Inactive", 
+		"*e = Status_Inactive",
 		"case \"pending\":",
 		"*e = Status_Pending",
 		"unknown enum value:",
@@ -556,9 +556,9 @@ func TestGenerateMultipleDeclarations(t *testing.T) {
 		id: UserID
 		name: string
 	}
-	
+
 	type UserID = int64
-	
+
 	enum Status {
 		active
 		inactive
@@ -616,7 +616,7 @@ func TestGenerateTaggedUnionJSONMethods(t *testing.T) {
 		green: string
 		rgba: RGBA
 	}
-	
+
 	struct RGBA {
 		r: nat8
 		g: nat8
@@ -689,7 +689,7 @@ func TestGenerateTaggedUnionJSONMethods(t *testing.T) {
 
 func TestToPascalCase(t *testing.T) {
 	g := NewGenerator()
-	
+
 	tests := []struct {
 		input    string
 		expected string
