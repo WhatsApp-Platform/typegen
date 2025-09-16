@@ -125,6 +125,9 @@ func TestGenerateArrayAndMap(t *testing.T) {
 	// Generate with InMemoryFS
 	fs := generators.NewInMemoryFS()
 	generator := NewGenerator()
+	generator.SetConfig(map[string]string{
+		"module-name": "example.com/test",
+	})
 	ctx := context.Background()
 
 	err = generator.Generate(ctx, module, fs)
@@ -140,10 +143,28 @@ func TestGenerateArrayAndMap(t *testing.T) {
 
 	expected := []string{
 		"package test",
+		"import \"example.com/test/typegen\"",
 		"type User struct {",
-		"Tags []string `json:\"tags\"`",
+		"Tags typegen.Array[string] `json:\"tags\"`",
 		"Metadata map[string]int64 `json:\"metadata\"`",
 		"}",
+	}
+
+	for _, exp := range expected {
+		if !strings.Contains(result, exp) {
+			t.Errorf("Expected result to contain %q, but got:\n%s", exp, result)
+		}
+	}
+
+	result, exists = fs.GetFileString("typegen/array.go")
+	if !exists {
+		t.Fatal("typegen/array.go should have been generated")
+	}
+
+	expected = []string{
+		"package typegen",
+		"type Array[T any] []T",
+		"func (a Array[T]) MarshalJSON",
 	}
 
 	for _, exp := range expected {

@@ -12,9 +12,10 @@ import (
 
 // Generator generates Go code from TypeGen AST
 type Generator struct {
-	packageName string
-	importMap   map[string]bool   // Track required imports
-	config      map[string]string // Configuration options
+	packageName        string
+	importMap          map[string]bool   // Track required imports
+	config             map[string]string // Configuration options
+	generatedArrayType bool              // Track if custom array type has been generated
 }
 
 // NewGenerator creates a new Go code generator
@@ -33,6 +34,7 @@ func (g *Generator) SetConfig(config map[string]string) {
 
 // Generate implements generators.Generator interface for module generation
 func (g *Generator) Generate(ctx context.Context, module *ast.Module, dest generators.FS) error {
+	g.generatedArrayType = false // Reset for each generation
 	return g.generateModuleRecursive(ctx, module, dest, "", module.Name)
 }
 
@@ -45,7 +47,7 @@ func (g *Generator) generateModuleRecursive(ctx context.Context, module *ast.Mod
 		goPath := dest.Join(basePath, goFilename)
 
 		// Generate code for this file
-		code, err := g.generateProgram(program, packageName)
+		code, err := g.generateProgram(program, packageName, dest)
 		if err != nil {
 			return fmt.Errorf("failed to generate code for %s: %w", filename, err)
 		}
@@ -69,7 +71,7 @@ func (g *Generator) generateModuleRecursive(ctx context.Context, module *ast.Mod
 }
 
 // generateProgram converts a TypeGen program to Go code
-func (g *Generator) generateProgram(program *ast.ProgramNode, packageName string) (string, error) {
+func (g *Generator) generateProgram(program *ast.ProgramNode, packageName string, dest generators.FS) (string, error) {
 	g.importMap = make(map[string]bool) // Reset imports for each generation
 	g.packageName = packageName
 
@@ -83,6 +85,7 @@ func (g *Generator) generateProgram(program *ast.ProgramNode, packageName string
 	parts = append(parts, fmt.Sprintf("package %s", g.packageName))
 	parts = append(parts, "")
 
+
 	// Process imports first to determine dependencies
 	for _, imp := range program.Imports {
 		// For Go, we'll need to handle qualified names in type generation
@@ -94,7 +97,7 @@ func (g *Generator) generateProgram(program *ast.ProgramNode, packageName string
 
 	// Generate declarations in original order
 	for _, decl := range program.Declarations {
-		code, err := g.generateDeclaration(decl)
+		code, err := g.generateDeclaration(decl, dest)
 		if err != nil {
 			return "", err
 		}
@@ -189,14 +192,14 @@ func (g *Generator) buildImports() string {
 }
 
 // generateDeclaration generates Go code for a declaration
-func (g *Generator) generateDeclaration(decl ast.Declaration) (string, error) {
+func (g *Generator) generateDeclaration(decl ast.Declaration, dest generators.FS) (string, error) {
 	switch d := decl.(type) {
 	case *ast.StructNode:
-		return g.generateStruct(d)
+		return g.generateStruct(d, dest)
 	case *ast.EnumNode:
-		return g.generateEnum(d)
+		return g.generateEnum(d, dest)
 	case *ast.TypeAliasNode:
-		return g.generateTypeAlias(d)
+		return g.generateTypeAlias(d, dest)
 	case *ast.ConstantNode:
 		return g.generateConstant(d)
 	default:
@@ -205,7 +208,7 @@ func (g *Generator) generateDeclaration(decl ast.Declaration) (string, error) {
 }
 
 // generateStruct generates a Go struct
-func (g *Generator) generateStruct(s *ast.StructNode) (string, error) {
+func (g *Generator) generateStruct(s *ast.StructNode, dest generators.FS) (string, error) {
 	var parts []string
 	parts = append(parts, fmt.Sprintf("type %s struct {", s.Name))
 
@@ -215,7 +218,7 @@ func (g *Generator) generateStruct(s *ast.StructNode) (string, error) {
 	}
 
 	for _, field := range s.Fields {
-		fieldCode, err := g.generateField(field)
+		fieldCode, err := g.generateField(field, dest)
 		if err != nil {
 			return "", err
 		}
@@ -227,9 +230,9 @@ func (g *Generator) generateStruct(s *ast.StructNode) (string, error) {
 }
 
 // generateField generates a field definition for Go struct
-func (g *Generator) generateField(field *ast.FieldNode) (string, error) {
+func (g *Generator) generateField(field *ast.FieldNode, dest generators.FS) (string, error) {
 	goName := g.toGoFieldName(field.Name)
-	goType, err := g.generateType(field.Type, field.Optional)
+	goType, err := g.generateType(field.Type, field.Optional, dest)
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +248,7 @@ func (g *Generator) generateField(field *ast.FieldNode) (string, error) {
 }
 
 // generateEnum generates Go constants and a type for enum
-func (g *Generator) generateEnum(e *ast.EnumNode) (string, error) {
+func (g *Generator) generateEnum(e *ast.EnumNode, dest generators.FS) (string, error) {
 	var parts []string
 
 	// Check if any variants have payloads - if so, use interface approach
@@ -258,7 +261,7 @@ func (g *Generator) generateEnum(e *ast.EnumNode) (string, error) {
 	}
 
 	if hasPayloads {
-		return g.generateTaggedUnion(e)
+		return g.generateTaggedUnion(e, dest)
 	}
 
 	// Simple enum without payloads - use iota constants
@@ -331,7 +334,7 @@ func (g *Generator) generateEnum(e *ast.EnumNode) (string, error) {
 }
 
 // generateTaggedUnion generates a tagged union for enums with payloads
-func (g *Generator) generateTaggedUnion(e *ast.EnumNode) (string, error) {
+func (g *Generator) generateTaggedUnion(e *ast.EnumNode, dest generators.FS) (string, error) {
 	g.importMap["\"encoding/json\""] = true
 	g.importMap["\"fmt\""] = true
 
@@ -356,7 +359,7 @@ func (g *Generator) generateTaggedUnion(e *ast.EnumNode) (string, error) {
 
 		if variant.Payload != nil {
 			// Variant with payload - create a type alias
-			goType, err := g.generateType(variant.Payload, false)
+			goType, err := g.generateType(variant.Payload, false, dest)
 			if err != nil {
 				return "", err
 			}
@@ -449,8 +452,8 @@ func (g *Generator) generateTaggedUnion(e *ast.EnumNode) (string, error) {
 }
 
 // generateTypeAlias generates a type alias
-func (g *Generator) generateTypeAlias(t *ast.TypeAliasNode) (string, error) {
-	goType, err := g.generateType(t.Type, false)
+func (g *Generator) generateTypeAlias(t *ast.TypeAliasNode, dest generators.FS) (string, error) {
+	goType, err := g.generateType(t.Type, false, dest)
 	if err != nil {
 		return "", err
 	}
@@ -471,7 +474,7 @@ func (g *Generator) generateConstant(c *ast.ConstantNode) (string, error) {
 }
 
 // generateType converts a TypeGen type to Go type
-func (g *Generator) generateType(t ast.Type, optional bool) (string, error) {
+func (g *Generator) generateType(t ast.Type, optional bool, dest generators.FS) (string, error) {
 	var baseType string
 
 	switch typ := t.(type) {
@@ -480,23 +483,37 @@ func (g *Generator) generateType(t ast.Type, optional bool) (string, error) {
 	case *ast.NamedType:
 		baseType = g.handleQualifiedType(typ.Name)
 	case *ast.ArrayType:
-		elementType, err := g.generateType(typ.ElementType, false)
+		elementType, err := g.generateType(typ.ElementType, false, dest)
 		if err != nil {
 			return "", err
 		}
-		baseType = fmt.Sprintf("[]%s", elementType)
+
+		// Generate array module if not already generated
+		if err := g.generateArrayModule(dest); err != nil {
+			return "", err
+		}
+
+		// Add typegen import
+		moduleName, ok := g.config["module-name"]
+		if !ok || moduleName == "" {
+			return "", fmt.Errorf("module-name configuration is required when using arrays")
+		}
+		typegenImportPath := fmt.Sprintf("%s/typegen", moduleName)
+		g.importMap[fmt.Sprintf("\"%s\"", typegenImportPath)] = true
+
+		baseType = fmt.Sprintf("typegen.Array[%s]", elementType)
 	case *ast.MapType:
-		keyType, err := g.generateType(typ.KeyType, false)
+		keyType, err := g.generateType(typ.KeyType, false, dest)
 		if err != nil {
 			return "", err
 		}
-		valueType, err := g.generateType(typ.ValueType, false)
+		valueType, err := g.generateType(typ.ValueType, false, dest)
 		if err != nil {
 			return "", err
 		}
 		baseType = fmt.Sprintf("map[%s]%s", keyType, valueType)
 	case *ast.OptionalType:
-		return g.generateType(typ.ElementType, true)
+		return g.generateType(typ.ElementType, true, dest)
 	default:
 		return "", fmt.Errorf("unknown type: %T", t)
 	}
@@ -580,6 +597,45 @@ func (g *Generator) toPascalCase(name string) string {
 	}
 	return result.String()
 }
+
+// generateArrayModule generates the typegen/array.go file if it hasn't been generated yet
+func (g *Generator) generateArrayModule(dest generators.FS) error {
+	if g.generatedArrayType {
+		return nil // Already generated
+	}
+
+	arrayTypePath := dest.Join("typegen", "array.go")
+	arrayTypeCode := g.generateArrayTypeFile()
+
+	if err := dest.WriteFile(arrayTypePath, []byte(arrayTypeCode), 0644); err != nil {
+		return fmt.Errorf("failed to write typegen/array.go: %w", err)
+	}
+
+	g.generatedArrayType = true
+	return nil
+}
+
+// generateArrayTypeFile generates the typegen/array.go file with the custom Array[T] type
+func (g *Generator) generateArrayTypeFile() string {
+	return `// Code generated by TypeGen. DO NOT EDIT.
+
+package typegen
+
+import "encoding/json"
+
+// Array is a wrapper around slices that ensures empty arrays are serialized as [] instead of null
+type Array[T any] []T
+
+// MarshalJSON ensures that empty arrays are serialized as [] instead of null
+func (a Array[T]) MarshalJSON() ([]byte, error) {
+	if a == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal([]T(a))
+}
+`
+}
+
 
 func init() {
 	// Register the Go generator globally
