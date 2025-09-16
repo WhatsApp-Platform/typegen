@@ -12,10 +12,10 @@ import (
 
 // Generator generates Python code with Pydantic models from TypeGen AST
 type Generator struct {
-	importMap     map[string]bool   // Track required imports
-	config        map[string]string // Configuration options
-	cyclicTypes   map[string]bool   // Track types that are part of cycles
-	definedTypes  map[string]bool   // Track which types have been defined already
+	importMap    map[string]bool   // Track required imports
+	config       map[string]string // Configuration options
+	cyclicTypes  map[string]bool   // Track types that are part of cycles
+	definedTypes map[string]bool   // Track which types have been defined already
 }
 
 // NewGenerator creates a new Python code generator
@@ -95,11 +95,6 @@ func (g *Generator) generateProgramWithModule(program *ast.ProgramNode, module *
 	return g.generateProgramInternal(program, module, currentFilename)
 }
 
-// generateProgram converts a TypeGen program to Python code (for backward compatibility)
-func (g *Generator) generateProgram(program *ast.ProgramNode) (string, error) {
-	return g.generateProgramInternal(program, nil, "")
-}
-
 // generateProgramInternal is the internal implementation that handles both cases
 func (g *Generator) generateProgramInternal(program *ast.ProgramNode, module *ast.Module, currentFilename string) (string, error) {
 	g.importMap = make(map[string]bool)    // Reset imports for each generation
@@ -137,7 +132,7 @@ func (g *Generator) generateProgramInternal(program *ast.ProgramNode, module *as
 	if err != nil {
 		return "", fmt.Errorf("failed to sort declarations: %w", err)
 	}
-	
+
 	// Store cyclic types for forward reference generation
 	for _, typeName := range cyclicTypes {
 		g.cyclicTypes[typeName] = true
@@ -151,7 +146,7 @@ func (g *Generator) generateProgramInternal(program *ast.ProgramNode, module *as
 		}
 		parts = append(parts, code)
 		parts = append(parts, "")
-		
+
 		// Track that this type has been defined
 		declName := g.getDeclName(decl)
 		if declName != "" {
@@ -273,7 +268,12 @@ func (g *Generator) generateField(field *ast.FieldNode) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s: %s", pythonName, pythonType), nil
+	if !field.Optional {
+		return fmt.Sprintf("%s: %s", pythonName, pythonType), nil
+	} else {
+		g.importMap["from pydantic import Field"] = true
+		return fmt.Sprintf("%s: %s = Field(default=None)", pythonName, pythonType), nil
+	}
 }
 
 // generateEnum generates a Python Enum
@@ -499,7 +499,7 @@ func (g *Generator) needsForwardReference(typeName string) bool {
 	if strings.Contains(typeName, ".") {
 		return false
 	}
-	
+
 	// If this type is marked as cyclic and hasn't been defined yet, use forward reference
 	return g.cyclicTypes[typeName] && !g.definedTypes[typeName]
 }
@@ -507,12 +507,12 @@ func (g *Generator) needsForwardReference(typeName string) bool {
 // collectTypesNeedingRebuild collects all types that need model_rebuild() calls
 func (g *Generator) collectTypesNeedingRebuild(cyclicTypes []string, declarations []ast.Declaration) []string {
 	rebuildsNeeded := make(map[string]bool)
-	
+
 	// Add all cyclic types
 	for _, typeName := range cyclicTypes {
 		rebuildsNeeded[typeName] = true
 	}
-	
+
 	// Check enum variant classes for forward references
 	for _, decl := range declarations {
 		if enumNode, ok := decl.(*ast.EnumNode); ok {
@@ -523,7 +523,7 @@ func (g *Generator) collectTypesNeedingRebuild(cyclicTypes []string, declaration
 					break
 				}
 			}
-			
+
 			if hasPayloads {
 				// Check each variant for forward references
 				for _, variant := range enumNode.Variants {
@@ -537,14 +537,14 @@ func (g *Generator) collectTypesNeedingRebuild(cyclicTypes []string, declaration
 			}
 		}
 	}
-	
+
 	// Convert to sorted slice
 	var result []string
 	for typeName := range rebuildsNeeded {
 		result = append(result, typeName)
 	}
 	sort.Strings(result)
-	
+
 	return result
 }
 
@@ -722,7 +722,7 @@ func (g *Generator) kahnSortWithCycles(declarations []ast.Declaration, dependenc
 				result = append(result, declMap[name])
 			}
 		}
-		
+
 		// Sort cyclic types for consistent output
 		sort.Strings(cyclicTypes)
 	}
@@ -815,28 +815,28 @@ func (g *Generator) generateInitPy(moduleImports []string, allTypes []string) st
 func (g *Generator) generateCrossFileImports(program *ast.ProgramNode, module *ast.Module, currentFilename string) []string {
 	var imports []string
 	referencedTypes := make(map[string]bool)
-	
+
 	// Collect all types referenced in this program
 	for _, decl := range program.Declarations {
 		g.collectReferencedTypes(decl, referencedTypes)
 	}
-	
+
 	// Find which file defines each referenced type and generate imports
 	fileToTypes := make(map[string][]string)
-	
+
 	for typeName := range referencedTypes {
 		// Skip qualified names (they already have module references)
 		if strings.Contains(typeName, ".") {
 			continue
 		}
-		
+
 		// Find which file in the module defines this type
 		definingFile := g.findTypeDefiningFile(typeName, module, currentFilename)
 		if definingFile != "" {
 			fileToTypes[definingFile] = append(fileToTypes[definingFile], typeName)
 		}
 	}
-	
+
 	// Generate import statements
 	for filename, types := range fileToTypes {
 		if len(types) > 0 {
@@ -847,7 +847,7 @@ func (g *Generator) generateCrossFileImports(program *ast.ProgramNode, module *a
 			imports = append(imports, fmt.Sprintf("from .%s import %s", moduleName, strings.Join(types, ", ")))
 		}
 	}
-	
+
 	// Sort imports for consistent output
 	sort.Strings(imports)
 	return imports
@@ -897,7 +897,7 @@ func (g *Generator) findTypeDefiningFile(typeName string, module *ast.Module, cu
 		if filename == currentFilename {
 			continue
 		}
-		
+
 		// Check if this file defines the type
 		for _, decl := range program.Declarations {
 			declName := g.getDeclName(decl)
@@ -906,7 +906,7 @@ func (g *Generator) findTypeDefiningFile(typeName string, module *ast.Module, cu
 			}
 		}
 	}
-	
+
 	return "" // Type not found in any file
 }
 
